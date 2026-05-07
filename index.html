@@ -34,15 +34,17 @@ header{padding:24px 24px 0;max-width:1100px;margin:0 auto;display:flex;align-ite
 main{max-width:1100px;margin:0 auto;padding:24px}
 .grid{display:grid;gap:20px}
 .grid-2{grid-template-columns:1fr 1fr}
-.grid-4{grid-template-columns:repeat(4,1fr)}
-@media(max-width:900px){.grid-2{grid-template-columns:1fr}.grid-4{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:500px){.grid-4{grid-template-columns:1fr 1fr}}
+.grid-stats{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}}
 /* CARD */
 .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);backdrop-filter:blur(12px)}
 .card-title{font-size:1rem;font-weight:600;color:var(--accent);margin-bottom:18px;display:flex;align-items:center;gap:8px}
 /* STAT CARD */
-.stat-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;transition:.2s}
+.stat-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;
+  transition:.2s;cursor:pointer;user-select:none}
 .stat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.stat-card.active{border-color:var(--accent);background:rgba(0,201,167,.12);
+  transform:translateY(-2px);box-shadow:0 0 0 2px rgba(0,201,167,.25)}
 .stat-icon{font-size:1.8rem;margin-bottom:8px}
 .stat-val{font-size:1.6rem;font-weight:700;color:var(--text)}
 .stat-unit{font-size:.8rem;color:var(--muted);margin-left:2px}
@@ -82,8 +84,6 @@ tr:hover td{background:rgba(255,255,255,.03)}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
-/* STATS flexible grid */
-.grid-stats{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 /* period toggle */
 .period-field{display:flex;align-items:center;gap:10px;padding:12px 14px;
   background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:.2s}
@@ -100,7 +100,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
     <div class="logo">🏃 健康全記錄<span id="todayLabel"></span></div>
   </div>
   <div class="header-btns">
-    <button class="btn" onclick="importData()" id="importBtn">📂 匯入</button>
+    <button class="btn" onclick="importData()">📂 匯入</button>
     <button class="btn" onclick="exportData()">💾 匯出</button>
     <input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleImport(event)">
   </div>
@@ -109,12 +109,24 @@ tr:hover td{background:rgba(255,255,255,.03)}
 <main>
   <!-- STATS -->
   <div class="grid grid-stats" id="statsRow" style="margin-bottom:0">
-    <div class="stat-card"><div class="stat-icon">⚖️</div><div class="stat-val" id="s-weight">--<span class="stat-unit">kg</span></div><div class="stat-label">近7天平均體重</div></div>
-    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-val" id="s-fat">--<span class="stat-unit">%</span></div><div class="stat-label">最新體脂肪</div></div>
-    <div class="stat-card"><div class="stat-icon">💪</div><div class="stat-val" id="s-muscle">--<span class="stat-unit">kg</span></div><div class="stat-label">最新肌肉量</div></div>
-    <div class="stat-card"><div class="stat-icon">🩺</div><div class="stat-val" id="s-bp">--</div><div class="stat-label">最新血壓</div></div>
-    <div class="stat-card"><div class="stat-icon">👟</div><div class="stat-val" id="s-steps">--</div><div class="stat-label">累計步數</div></div>
-    <div class="stat-card"><div class="stat-icon">🏃</div><div class="stat-val" id="s-jog">--</div><div class="stat-label">超慢跑累計</div></div>
+    <div class="stat-card active" onclick="selectMetric('weight',this)">
+      <div class="stat-icon">⚖️</div><div class="stat-val" id="s-weight">--<span class="stat-unit">kg</span></div><div class="stat-label">近7天平均體重</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('fat',this)">
+      <div class="stat-icon">📊</div><div class="stat-val" id="s-fat">--<span class="stat-unit">%</span></div><div class="stat-label">最新體脂肪</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('muscle',this)">
+      <div class="stat-icon">💪</div><div class="stat-val" id="s-muscle">--<span class="stat-unit">kg</span></div><div class="stat-label">最新肌肉量</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('bp',this)">
+      <div class="stat-icon">🩺</div><div class="stat-val" id="s-bp">--</div><div class="stat-label">最新血壓</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('steps',this)">
+      <div class="stat-icon">👟</div><div class="stat-val" id="s-steps">--</div><div class="stat-label">累計步數</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('jog',this)">
+      <div class="stat-icon">🏃</div><div class="stat-val" id="s-jog">--</div><div class="stat-label">超慢跑累計</div>
+    </div>
   </div>
 
   <div class="grid grid-2" style="margin-top:20px">
@@ -122,64 +134,46 @@ tr:hover td{background:rgba(255,255,255,.03)}
     <div class="card">
       <div class="card-title">📥 今日記錄</div>
       <div class="form-grid">
-        <div class="field">
-          <label for="f-date">日期</label>
-          <input type="date" id="f-date">
-        </div>
-        <div class="field">
-          <label for="f-weight">體重（kg）</label>
-          <input type="number" id="f-weight" placeholder="例：70.5" step="0.1" min="20" max="300">
-        </div>
-        <div class="field">
-          <label for="f-fat">體脂肪（%）</label>
-          <input type="number" id="f-fat" placeholder="例：18.5" step="0.1" min="1" max="70">
-        </div>
-        <div class="field">
-          <label for="f-muscle">肌肉量（kg）</label>
-          <input type="number" id="f-muscle" placeholder="例：28.0" step="0.1" min="0" max="100">
-        </div>
-        <div class="field">
-          <label for="f-bp-sys">血壓高（收縮壓）</label>
-          <input type="number" id="f-bp-sys" placeholder="例：120" step="1" min="50" max="250">
-        </div>
-        <div class="field">
-          <label for="f-bp-dia">血壓低（舒張壓）</label>
-          <input type="number" id="f-bp-dia" placeholder="例：80" step="1" min="30" max="150">
-        </div>
-        <div class="field">
-          <label for="f-steps">步數</label>
-          <input type="number" id="f-steps" placeholder="例：8000" step="1" min="0">
-        </div>
-        <div class="field">
-          <label for="f-jog">超慢跑（分鐘）</label>
-          <input type="number" id="f-jog" placeholder="例：30" step="1" min="0">
-        </div>
+        <div class="field"><label for="f-date">日期</label><input type="date" id="f-date"></div>
+        <div class="field"><label for="f-weight">體重（kg）</label><input type="number" id="f-weight" placeholder="例：70.5" step="0.1" min="20" max="300"></div>
+        <div class="field"><label for="f-fat">體脂肪（%）</label><input type="number" id="f-fat" placeholder="例：18.5" step="0.1" min="1" max="70"></div>
+        <div class="field"><label for="f-muscle">肌肉量（kg）</label><input type="number" id="f-muscle" placeholder="例：28.0" step="0.1" min="0" max="100"></div>
+        <div class="field"><label for="f-bp-sys">血壓高（收縮壓）</label><input type="number" id="f-bp-sys" placeholder="例：120" step="1" min="50" max="250"></div>
+        <div class="field"><label for="f-bp-dia">血壓低（舒張壓）</label><input type="number" id="f-bp-dia" placeholder="例：80" step="1" min="30" max="150"></div>
+        <div class="field"><label for="f-steps">步數</label><input type="number" id="f-steps" placeholder="例：8000" step="1" min="0"></div>
+        <div class="field"><label for="f-jog">超慢跑（分鐘）</label><input type="number" id="f-jog" placeholder="例：30" step="1" min="0"></div>
         <div class="period-field" id="periodField" onclick="togglePeriod()">
           <input type="checkbox" id="f-period" onclick="event.stopPropagation();togglePeriod()">
           <label for="f-period">🩸 生理期（當天）</label>
         </div>
       </div>
       <div class="form-actions" style="margin-top:18px">
-        <button class="btn btn-accent" onclick="saveRecord()" id="saveBtn">✓ 儲存記錄</button>
+        <button class="btn btn-accent" onclick="saveRecord()">✓ 儲存記錄</button>
         <button class="btn" onclick="clearForm()">✕ 清除</button>
       </div>
     </div>
 
-    <!-- CHART -->
+    <!-- MAIN CHART -->
     <div class="card">
-      <div class="card-title">📈 體重曲線</div>
-      <div class="range-btns">
+      <div class="card-title">📈 <span id="chartTitle">體重趨勢</span></div>
+      <div class="range-btns" id="chartRangeBtns">
         <button class="range-btn active" onclick="setRange(7,this)">7天</button>
         <button class="range-btn" onclick="setRange(30,this)">30天</button>
         <button class="range-btn" onclick="setRange(0,this)">全部</button>
       </div>
-      <canvas id="weightChart" height="180"></canvas>
+      <canvas id="mainChart" height="180"></canvas>
     </div>
   </div>
 
   <!-- HISTORY -->
   <div class="card" style="margin-top:20px">
-    <div class="card-title">📋 歷史紀錄</div>
+    <div class="card-title" style="justify-content:space-between">
+      <span>📋 歷史紀錄</span>
+      <button class="btn" style="font-size:.8rem;padding:5px 14px" onclick="toggleHistView()">
+        <span id="histViewBtn">📊 圖表</span>
+      </button>
+    </div>
+    <!-- filter row -->
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div class="range-btns" style="margin-bottom:0">
         <button class="range-btn hist-btn active" onclick="setHistoryFilter('all',this)">全部</button>
@@ -192,12 +186,16 @@ tr:hover td{background:rgba(255,255,255,.03)}
         <button class="btn" id="histNextBtn" style="padding:5px 12px" onclick="shiftHistory(1)">下一期 ›</button>
       </div>
     </div>
-    <div class="tbl-wrap">
+    <!-- chart view -->
+    <div id="histChartArea" style="display:none">
+      <div id="metricChecks" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
+      <canvas id="histChart" height="220"></canvas>
+    </div>
+    <!-- table view -->
+    <div id="histTblWrap" class="tbl-wrap">
       <table>
         <thead>
-          <tr>
-            <th>日期</th><th>體重(kg)</th><th>體脂肪(%)</th><th>肌肉量(kg)</th><th>血壓</th><th>步數</th><th>超慢跑</th><th>生理期</th><th>操作</th>
-          </tr>
+          <tr><th>日期</th><th>體重(kg)</th><th>體脂肪(%)</th><th>肌肉量(kg)</th><th>血壓</th><th>步數</th><th>超慢跑</th><th>生理期</th><th>操作</th></tr>
         </thead>
         <tbody id="historyBody"></tbody>
       </table>
@@ -210,19 +208,72 @@ tr:hover td{background:rgba(255,255,255,.03)}
 
 <script>
 const KEY = 'healthRecords_v1';
-let chartRange = 7;
-let weightChart = null;
+let chartRange   = 7;
+let mainChart    = null;
+let activeMetric = 'weight';
 let historyFilter = 'all';
 let historyOffset = 0;
+let histViewMode  = 'table';
+let histChart     = null;
+let histSelMetrics = new Set(['weight','fat']);
+
+// Config for the main single-metric chart
+const METRIC_CFG = {
+  weight: {label:'體重',   unit:'kg',   key:'weight', color:'#00c9a7', type:'line'},
+  fat:    {label:'體脂肪', unit:'%',    key:'fat',    color:'#00b4d8', type:'line'},
+  muscle: {label:'肌肉量', unit:'kg',   key:'muscle', color:'#a78bfa', type:'line'},
+  bp:     {label:'血壓',   unit:'mmHg',               color:'#ff6b6b', type:'line'},
+  steps:  {label:'步數',   unit:'步',   key:'steps',  color:'#ffd93d', type:'bar'},
+  jog:    {label:'超慢跑', unit:'分鐘', key:'jog',    color:'#ff9f43', type:'bar'},
+};
+
+// Config list for the multi-metric history chart
+const HIST_METRICS = [
+  {id:'weight', label:'體重',   key:'weight', color:'#00c9a7', type:'line', unit:'kg',   axis:'y'},
+  {id:'fat',    label:'體脂肪', key:'fat',    color:'#00b4d8', type:'line', unit:'%',    axis:'y'},
+  {id:'muscle', label:'肌肉量', key:'muscle', color:'#a78bfa', type:'line', unit:'kg',   axis:'y'},
+  {id:'bpSys',  label:'收縮壓', key:'bpSys',  color:'#ff6b6b', type:'line', unit:'mmHg', axis:'y'},
+  {id:'bpDia',  label:'舒張壓', key:'bpDia',  color:'#ff9f43', type:'line', unit:'mmHg', axis:'y'},
+  {id:'steps',  label:'步數',   key:'steps',  color:'#ffd93d', type:'bar',  unit:'步',   axis:'y2'},
+  {id:'jog',    label:'超慢跑', key:'jog',    color:'#4ecdc4', type:'bar',  unit:'分鐘', axis:'y2'},
+];
+
+const TOOLTIP_OPTS = {
+  backgroundColor:'rgba(10,14,26,.95)', titleColor:'#00c9a7',
+  bodyColor:'#e8eaf0', borderColor:'rgba(255,255,255,.1)', borderWidth:1, padding:12,
+};
+const SCALE_X = {ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}};
+const SCALE_Y = {ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}};
+
+// Draws pink background on period days for any chart
+const periodBgPlugin = {
+  id: 'periodBg',
+  beforeDatasetsDraw(chart) {
+    const {ctx, chartArea, scales} = chart;
+    if (!chartArea || !scales.x) return;
+    const {top, bottom} = chartArea;
+    const x = scales.x;
+    const periodSet = new Set(getRecords().filter(r => r.period).map(r => r.date.slice(5)));
+    chart.data.labels.forEach((lbl, i) => {
+      if (!periodSet.has(lbl)) return;
+      const left  = x.getPixelForValue(i - 0.5);
+      const right = x.getPixelForValue(i + 0.5);
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,107,138,0.13)';
+      ctx.fillRect(left, top, right - left, bottom - top);
+      ctx.restore();
+    });
+  }
+};
+Chart.register(periodBgPlugin);
+
+// ─── Data ─────────────────────────────────────────────────
 
 function getRecords() {
   try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { return []; }
 }
-function saveRecords(arr) {
-  localStorage.setItem(KEY, JSON.stringify(arr));
-}
+function saveRecords(arr) { localStorage.setItem(KEY, JSON.stringify(arr)); }
 
-// today date string
 function today() {
   const d = new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
@@ -234,19 +285,11 @@ function initDate() {
   document.getElementById('todayLabel').textContent = ' · '+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
 }
 
-// parse "H:MM" or "HH:MM" → minutes
-function parseJog(str) {
-  if (!str || !str.trim()) return 0;
-  const m = str.trim().match(/^(\d+):(\d{1,2})$/);
-  if (!m) return NaN;
-  return parseInt(m[1])*60 + parseInt(m[2]);
-}
-// minutes → "Xh Ym" or "Ym"
 function fmtMinutes(mins) {
   if (!mins && mins !== 0) return '--';
   const h = Math.floor(mins/60), m = mins%60;
-  if (h === 0) return m+'分';
-  if (m === 0) return h+'時';
+  if (h===0) return m+'分';
+  if (m===0) return h+'時';
   return h+'時'+m+'分';
 }
 
@@ -259,6 +302,8 @@ function toast(msg, isErr) {
   setTimeout(()=>el.classList.remove('show'), 2200);
 }
 
+// ─── Form ─────────────────────────────────────────────────
+
 function togglePeriod() {
   const cb = document.getElementById('f-period');
   const field = document.getElementById('periodField');
@@ -267,31 +312,28 @@ function togglePeriod() {
 }
 
 function saveRecord() {
-  const date = document.getElementById('f-date').value;
+  const date   = document.getElementById('f-date').value;
   const weight = document.getElementById('f-weight').value;
-  const fat = document.getElementById('f-fat').value;
+  const fat    = document.getElementById('f-fat').value;
   const muscle = document.getElementById('f-muscle').value;
-  const bpSys = document.getElementById('f-bp-sys').value;
-  const bpDia = document.getElementById('f-bp-dia').value;
-  const steps = document.getElementById('f-steps').value;
+  const bpSys  = document.getElementById('f-bp-sys').value;
+  const bpDia  = document.getElementById('f-bp-dia').value;
+  const steps  = document.getElementById('f-steps').value;
   const jogStr = document.getElementById('f-jog').value;
   const period = document.getElementById('f-period').checked;
-
   if (!date) { toast('請選擇日期', true); return; }
-  const jogMins = jogStr ? parseInt(jogStr) : 0;
-
   const records = getRecords();
   const idx = records.findIndex(r => r.date === date);
   const entry = {
     date,
     weight: weight ? parseFloat(weight) : null,
-    fat: fat ? parseFloat(fat) : null,
+    fat:    fat    ? parseFloat(fat)    : null,
     muscle: muscle ? parseFloat(muscle) : null,
-    bpSys: bpSys ? parseInt(bpSys) : null,
-    bpDia: bpDia ? parseInt(bpDia) : null,
-    steps: steps ? parseInt(steps) : null,
-    jog: jogMins,
-    period
+    bpSys:  bpSys  ? parseInt(bpSys)   : null,
+    bpDia:  bpDia  ? parseInt(bpDia)   : null,
+    steps:  steps  ? parseInt(steps)   : null,
+    jog:    jogStr ? parseInt(jogStr)  : 0,
+    period,
   };
   if (idx >= 0) { records[idx] = entry; toast('記錄已更新！'); }
   else { records.push(entry); records.sort((a,b)=>a.date<b.date?-1:1); toast('記錄已儲存！'); }
@@ -301,114 +343,124 @@ function saveRecord() {
 
 function clearForm() {
   document.getElementById('f-date').value = today();
-  document.getElementById('f-weight').value = '';
-  document.getElementById('f-fat').value = '';
-  document.getElementById('f-muscle').value = '';
-  document.getElementById('f-bp-sys').value = '';
-  document.getElementById('f-bp-dia').value = '';
-  document.getElementById('f-steps').value = '';
-  document.getElementById('f-jog').value = '';
+  ['f-weight','f-fat','f-muscle','f-bp-sys','f-bp-dia','f-steps','f-jog'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
   document.getElementById('f-period').checked = false;
   document.getElementById('periodField').classList.remove('checked');
 }
 
 function deleteRecord(date) {
   if (!confirm('確定刪除 '+date+' 的記錄？')) return;
-  const records = getRecords().filter(r => r.date !== date);
-  saveRecords(records);
+  saveRecords(getRecords().filter(r => r.date !== date));
   renderAll();
   toast('已刪除');
 }
 
-function setRange(n, btn) {
-  chartRange = n;
-  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderChart();
-}
+// ─── Stats ────────────────────────────────────────────────
 
 function renderStats() {
   const records = getRecords();
   const rev = [...records].reverse();
-  // avg weight last 7 days
   const last7 = records.filter(r=>r.weight).slice(-7);
   const avgW = last7.length ? (last7.reduce((s,r)=>s+r.weight,0)/last7.length).toFixed(1) : '--';
   document.getElementById('s-weight').innerHTML = avgW+'<span class="stat-unit">kg</span>';
-  // latest fat
-  const latestFat = rev.find(r=>r.fat!=null);
-  document.getElementById('s-fat').innerHTML = (latestFat?latestFat.fat.toFixed(1):'--')+'<span class="stat-unit">%</span>';
-  // latest muscle
-  const latestMuscle = rev.find(r=>r.muscle!=null);
-  document.getElementById('s-muscle').innerHTML = (latestMuscle?latestMuscle.muscle.toFixed(1):'--')+'<span class="stat-unit">kg</span>';
-  // latest BP
-  const latestBP = rev.find(r=>r.bpSys!=null&&r.bpDia!=null);
-  document.getElementById('s-bp').innerHTML = latestBP ? latestBP.bpSys+'<span class="stat-unit">/</span>'+latestBP.bpDia : '--';
-  // total steps
+  const lFat = rev.find(r=>r.fat!=null);
+  document.getElementById('s-fat').innerHTML = (lFat?lFat.fat.toFixed(1):'--')+'<span class="stat-unit">%</span>';
+  const lMus = rev.find(r=>r.muscle!=null);
+  document.getElementById('s-muscle').innerHTML = (lMus?lMus.muscle.toFixed(1):'--')+'<span class="stat-unit">kg</span>';
+  const lBP = rev.find(r=>r.bpSys!=null&&r.bpDia!=null);
+  document.getElementById('s-bp').innerHTML = lBP ? lBP.bpSys+'<span class="stat-unit">/</span>'+lBP.bpDia : '--';
   const totalSteps = records.reduce((s,r)=>s+(r.steps||0),0);
   document.getElementById('s-steps').textContent = totalSteps>0 ? totalSteps.toLocaleString() : '--';
-  // total jog
   const totalJog = records.reduce((s,r)=>s+(r.jog||0),0);
   document.getElementById('s-jog').textContent = totalJog>0 ? fmtMinutes(totalJog) : '--';
 }
 
+// ─── Main Chart ───────────────────────────────────────────
+
+function selectMetric(metric, el) {
+  activeMetric = metric;
+  document.querySelectorAll('#statsRow .stat-card').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderChart();
+}
+
+function setRange(n, btn) {
+  chartRange = n;
+  document.querySelectorAll('#chartRangeBtns .range-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
 function renderChart() {
-  const allRecords = getRecords().filter(r=>r.weight);
-  let data = chartRange === 0 ? allRecords : allRecords.slice(-chartRange);
-  const labels = data.map(r=>r.date.slice(5));
-  const vals = data.map(r=>r.weight);
-  const ctx = document.getElementById('weightChart').getContext('2d');
-  if (weightChart) weightChart.destroy();
-  weightChart = new Chart(ctx, {
-    type:'line',
-    data:{
-      labels,
-      datasets:[{
-        label:'體重(kg)',
-        data:vals,
-        borderColor:'#00c9a7',
-        backgroundColor:'rgba(0,201,167,.1)',
-        tension:.35,
-        fill:true,
-        pointBackgroundColor:'#00c9a7',
-        pointRadius:4,
-        pointHoverRadius:7,
-        borderWidth:2.5
-      }]
-    },
-    options:{
-      responsive:true,
-      plugins:{
-        legend:{display:false},
-        tooltip:{
-          backgroundColor:'rgba(10,14,26,.95)',
-          titleColor:'#00c9a7',
-          bodyColor:'#e8eaf0',
-          borderColor:'rgba(255,255,255,.1)',
-          borderWidth:1,
-          padding:12
-        }
+  const cfg = METRIC_CFG[activeMetric];
+  document.getElementById('chartTitle').textContent = cfg.label + '趨勢';
+  const all = getRecords();
+  let filtered = activeMetric === 'bp'
+    ? all.filter(r => r.bpSys != null || r.bpDia != null)
+    : all.filter(r => r[cfg.key] != null);
+  const data   = chartRange === 0 ? filtered : filtered.slice(-chartRange);
+  const labels = data.map(r => r.date.slice(5));
+  const lineBase = {tension:.35, pointRadius:4, pointHoverRadius:7, borderWidth:2.5};
+  const barBase  = {borderRadius:6, borderSkipped:false, borderWidth:1};
+  let datasets;
+  if (activeMetric === 'bp') {
+    datasets = [
+      { label:'收縮壓(mmHg)', data:data.map(r=>r.bpSys),
+        borderColor:'#ff6b6b', backgroundColor:'rgba(255,107,107,.12)',
+        pointBackgroundColor:'#ff6b6b', fill:true, ...lineBase },
+      { label:'舒張壓(mmHg)', data:data.map(r=>r.bpDia),
+        borderColor:'#ff9f43', backgroundColor:'transparent',
+        pointBackgroundColor:'#ff9f43', fill:false, ...lineBase },
+    ];
+  } else if (cfg.type === 'bar') {
+    datasets = [{
+      label: cfg.label+'('+cfg.unit+')',
+      data: data.map(r => r[cfg.key]),
+      backgroundColor: cfg.color+'bb', borderColor: cfg.color, ...barBase,
+    }];
+  } else {
+    datasets = [{
+      label: cfg.label+'('+cfg.unit+')',
+      data: data.map(r => r[cfg.key]),
+      borderColor: cfg.color, backgroundColor: cfg.color+'18',
+      pointBackgroundColor: cfg.color, fill:true, ...lineBase,
+    }];
+  }
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  if (mainChart) mainChart.destroy();
+  mainChart = new Chart(ctx, {
+    type: cfg.type === 'bar' ? 'bar' : 'line',
+    data: {labels, datasets},
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {display: activeMetric==='bp', labels:{color:'#8892a4',font:{family:'Outfit',size:11}}},
+        tooltip: TOOLTIP_OPTS,
       },
-      scales:{
-        x:{ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}},
-        y:{ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}}
-      }
+      scales: {x: SCALE_X, y: SCALE_Y},
     }
   });
 }
+
+// ─── History Filter ───────────────────────────────────────
 
 function setHistoryFilter(f, btn) {
   historyFilter = f;
   historyOffset = 0;
   document.querySelectorAll('.hist-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  document.getElementById('histNav').style.display = f === 'all' ? 'none' : 'flex';
+  document.getElementById('histNav').style.display = f==='all' ? 'none' : 'flex';
   renderHistory();
+  if (histViewMode==='chart') renderHistoryChart();
 }
 
 function shiftHistory(dir) {
   if (dir > 0 && historyOffset >= 0) return;
   historyOffset += dir;
   renderHistory();
+  if (histViewMode==='chart') renderHistoryChart();
 }
 
 function getFilteredRecords() {
@@ -418,19 +470,16 @@ function getFilteredRecords() {
   if (historyFilter === 'week') {
     const mon = new Date(now);
     const dow = mon.getDay();
-    mon.setDate(mon.getDate() - (dow === 0 ? 6 : dow - 1) + historyOffset * 7);
-    mon.setHours(0, 0, 0, 0);
-    const sun = new Date(mon);
-    sun.setDate(sun.getDate() + 6);
-    const start = mon.toISOString().slice(0, 10);
-    const end = sun.toISOString().slice(0, 10);
+    mon.setDate(mon.getDate() - (dow===0 ? 6 : dow-1) + historyOffset*7);
+    mon.setHours(0,0,0,0);
+    const sun = new Date(mon); sun.setDate(sun.getDate()+6);
+    const start = mon.toISOString().slice(0,10), end = sun.toISOString().slice(0,10);
     return all.filter(r => r.date >= start && r.date <= end);
   }
   if (historyFilter === 'month') {
     let y = now.getFullYear(), m = now.getMonth() + historyOffset;
-    y += Math.floor(m / 12);
-    m = ((m % 12) + 12) % 12;
-    const prefix = y + '-' + String(m + 1).padStart(2, '0');
+    y += Math.floor(m/12); m = ((m%12)+12)%12;
+    const prefix = y+'-'+String(m+1).padStart(2,'0');
     return all.filter(r => r.date.startsWith(prefix));
   }
   return all;
@@ -441,35 +490,35 @@ function getHistoryLabel() {
   if (historyFilter === 'week') {
     const mon = new Date(now);
     const dow = mon.getDay();
-    mon.setDate(mon.getDate() - (dow === 0 ? 6 : dow - 1) + historyOffset * 7);
-    const sun = new Date(mon);
-    sun.setDate(sun.getDate() + 6);
-    const fmt = d => (d.getMonth() + 1) + '/' + d.getDate();
-    return fmt(mon) + ' ~ ' + fmt(sun);
+    mon.setDate(mon.getDate() - (dow===0 ? 6 : dow-1) + historyOffset*7);
+    const sun = new Date(mon); sun.setDate(sun.getDate()+6);
+    const fmt = d => (d.getMonth()+1)+'/'+d.getDate();
+    return fmt(mon)+' ~ '+fmt(sun);
   }
   if (historyFilter === 'month') {
     let y = now.getFullYear(), m = now.getMonth() + historyOffset;
-    y += Math.floor(m / 12);
-    m = ((m % 12) + 12) % 12;
-    return y + '年' + (m + 1) + '月';
+    y += Math.floor(m/12); m = ((m%12)+12)%12;
+    return y+'年'+(m+1)+'月';
   }
   return '';
 }
 
+// ─── History Table ────────────────────────────────────────
+
 function renderHistory() {
   const records = getFilteredRecords();
-  const label = getHistoryLabel();
+  const label   = getHistoryLabel();
   if (label) {
     document.getElementById('histLabel').textContent = label;
-    const nextBtn = document.getElementById('histNextBtn');
-    nextBtn.disabled = historyOffset >= 0;
-    nextBtn.style.opacity = historyOffset >= 0 ? '.4' : '1';
-    nextBtn.style.cursor = historyOffset >= 0 ? 'default' : 'pointer';
+    const nb = document.getElementById('histNextBtn');
+    nb.disabled = historyOffset >= 0;
+    nb.style.opacity = historyOffset >= 0 ? '.4' : '1';
+    nb.style.cursor  = historyOffset >= 0 ? 'default' : 'pointer';
   }
   const tbody = document.getElementById('historyBody');
   const empty = document.getElementById('emptyMsg');
   if (!records.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
-  empty.style.display='none';
+  empty.style.display = 'none';
   tbody.innerHTML = records.map(r=>`
     <tr>
       <td>${r.date}</td>
@@ -484,28 +533,126 @@ function renderHistory() {
     </tr>`).join('');
 }
 
-function renderAll() { renderStats(); renderChart(); renderHistory(); }
-
-// 點選日期表格列，自動填入表單
+// Click row → fill form
 document.addEventListener('click', function(e) {
   const tr = e.target.closest('tr');
   if (!tr || e.target.classList.contains('del-btn')) return;
   const date = tr.cells[0]?.textContent;
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
-  const r = getRecords().find(x=>x.date===date);
+  const r = getRecords().find(x => x.date===date);
   if (!r) return;
-  document.getElementById('f-date').value = r.date;
-  document.getElementById('f-weight').value = r.weight??'';
-  document.getElementById('f-fat').value = r.fat??'';
-  document.getElementById('f-muscle').value = r.muscle??'';
-  document.getElementById('f-bp-sys').value = r.bpSys??'';
-  document.getElementById('f-bp-dia').value = r.bpDia??'';
-  document.getElementById('f-steps').value = r.steps??'';
-  document.getElementById('f-jog').value = r.jog || '';
+  document.getElementById('f-date').value    = r.date;
+  document.getElementById('f-weight').value  = r.weight??'';
+  document.getElementById('f-fat').value     = r.fat??'';
+  document.getElementById('f-muscle').value  = r.muscle??'';
+  document.getElementById('f-bp-sys').value  = r.bpSys??'';
+  document.getElementById('f-bp-dia').value  = r.bpDia??'';
+  document.getElementById('f-steps').value   = r.steps??'';
+  document.getElementById('f-jog').value     = r.jog||'';
   document.getElementById('f-period').checked = !!r.period;
   document.getElementById('periodField').classList.toggle('checked', !!r.period);
   document.getElementById('f-date').scrollIntoView({behavior:'smooth',block:'center'});
 });
+
+// ─── History Chart ────────────────────────────────────────
+
+function initMetricChecks() {
+  const container = document.getElementById('metricChecks');
+  container.innerHTML = '';
+  HIST_METRICS.forEach(m => {
+    const active = histSelMetrics.has(m.id);
+    const lbl = document.createElement('label');
+    lbl.style.cssText = `display:inline-flex;align-items:center;gap:6px;padding:5px 12px;
+      border-radius:8px;border:1px solid ${active?m.color:'rgba(255,255,255,.1)'};
+      color:${active?m.color:'#8892a4'};background:${active?m.color+'22':'transparent'};
+      cursor:pointer;font-size:.82rem;transition:.2s;font-family:Outfit,sans-serif;`;
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = active;
+    cb.style.cssText = `width:14px;height:14px;accent-color:${m.color};cursor:pointer;flex-shrink:0`;
+    cb.addEventListener('change', () => {
+      if (cb.checked) histSelMetrics.add(m.id); else histSelMetrics.delete(m.id);
+      lbl.style.borderColor = cb.checked ? m.color : 'rgba(255,255,255,.1)';
+      lbl.style.color       = cb.checked ? m.color : '#8892a4';
+      lbl.style.background  = cb.checked ? m.color+'22' : 'transparent';
+      renderHistoryChart();
+    });
+    lbl.appendChild(cb);
+    lbl.appendChild(document.createTextNode(m.label));
+    container.appendChild(lbl);
+  });
+}
+
+function renderHistoryChart() {
+  const records = getFilteredRecords().slice().reverse();
+  const labels  = records.map(r => r.date.slice(5));
+  const hasY2   = [...histSelMetrics].some(id => ['steps','jog'].includes(id));
+  const hasY    = [...histSelMetrics].some(id => !['steps','jog'].includes(id));
+  const datasets = [];
+  HIST_METRICS.forEach(m => {
+    if (!histSelMetrics.has(m.id)) return;
+    const ds = {
+      label: m.label+'('+m.unit+')',
+      data: records.map(r => r[m.key]??null),
+      yAxisID: m.axis,
+    };
+    if (m.type === 'line') {
+      Object.assign(ds, {
+        type:'line', borderColor:m.color, backgroundColor:m.color+'18',
+        pointBackgroundColor:m.color, tension:.35, fill:false,
+        pointRadius:4, pointHoverRadius:7, borderWidth:2, spanGaps:true,
+      });
+    } else {
+      Object.assign(ds, {
+        type:'bar', backgroundColor:m.color+'bb', borderColor:m.color,
+        borderRadius:4, borderWidth:1, borderSkipped:false,
+      });
+    }
+    datasets.push(ds);
+  });
+  const scales = {
+    x: SCALE_X,
+    y: {...SCALE_Y, display:hasY, position:'left'},
+  };
+  if (hasY2) {
+    scales.y2 = {...SCALE_Y, display:true, position:'right', grid:{drawOnChartArea:false}};
+  }
+  const ctx = document.getElementById('histChart').getContext('2d');
+  if (histChart) histChart.destroy();
+  if (!datasets.length) return;
+  histChart = new Chart(ctx, {
+    type:'bar',
+    data:{labels, datasets},
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{display:true, labels:{color:'#8892a4',font:{family:'Outfit',size:11}}},
+        tooltip:TOOLTIP_OPTS,
+      },
+      scales,
+    }
+  });
+}
+
+function toggleHistView() {
+  histViewMode = histViewMode==='table' ? 'chart' : 'table';
+  const btn       = document.getElementById('histViewBtn');
+  const chartArea = document.getElementById('histChartArea');
+  const tblWrap   = document.getElementById('histTblWrap');
+  if (histViewMode === 'chart') {
+    btn.textContent = '📋 表格';
+    chartArea.style.display = 'block';
+    tblWrap.style.display   = 'none';
+    initMetricChecks();
+    renderHistoryChart();
+  } else {
+    btn.textContent = '📊 圖表';
+    chartArea.style.display = 'none';
+    tblWrap.style.display   = 'block';
+    renderHistory();
+  }
+}
+
+// ─── Export / Import ──────────────────────────────────────
 
 function exportData() {
   const records = getRecords();
@@ -518,24 +665,29 @@ function exportData() {
 }
 function importData() { document.getElementById('fileInput').click(); }
 function handleImport(e) {
-  const file = e.target.files[0];
-  if (!file) return;
+  const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = function(ev) {
     try {
       const data = JSON.parse(ev.target.result);
       if (!Array.isArray(data)) throw new Error();
       if (!confirm('匯入將覆蓋現有 '+getRecords().length+' 筆資料，確定？')) return;
-      saveRecords(data);
-      renderAll();
+      saveRecords(data); renderAll();
       toast('匯入成功！共 '+data.length+' 筆');
     } catch { toast('檔案格式錯誤', true); }
   };
-  reader.readAsText(file);
-  e.target.value='';
+  reader.readAsText(file); e.target.value='';
 }
 
-// init
+// ─── Init ─────────────────────────────────────────────────
+
+function renderAll() {
+  renderStats();
+  renderChart();
+  renderHistory();
+  if (histViewMode==='chart') renderHistoryChart();
+}
+
 initDate();
 renderAll();
 </script>
