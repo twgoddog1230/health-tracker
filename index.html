@@ -207,8 +207,8 @@ const HIST_METRICS = [
   {id:'muscle', label:'肌肉量', key:'muscle', color:'#a78bfa', type:'line', unit:'kg',   axis:'y'},
   {id:'bpSys',  label:'收縮壓', key:'bpSys',  color:'#ff6b6b', type:'line', unit:'mmHg', axis:'y'},
   {id:'bpDia',  label:'舒張壓', key:'bpDia',  color:'#ff9f43', type:'line', unit:'mmHg', axis:'y'},
-  {id:'steps',  label:'步數',   key:'steps',  color:'#ffd93d', type:'bar',  unit:'步',   axis:'y2'},
-  {id:'jog',    label:'超慢跑', key:'jog',    color:'#4ecdc4', type:'bar',  unit:'分鐘', axis:'y2'},
+  {id:'steps',  label:'步數',   key:'steps',  color:'#ffd93d', type:'line', unit:'步',   axis:'y2'},
+  {id:'jog',    label:'超慢跑', key:'jog',    color:'#4ecdc4', type:'line', unit:'分鐘', axis:'y2'},
 ];
 
 const TOOLTIP_OPTS = {
@@ -218,27 +218,6 @@ const TOOLTIP_OPTS = {
 const SCALE_X = {ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}};
 const SCALE_Y = {ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}};
 
-// Marks period days with a pink background on the chart
-const periodBgPlugin = {
-  id: 'periodBg',
-  beforeDatasetsDraw(chart) {
-    const {ctx, chartArea, scales} = chart;
-    if (!chartArea || !scales.x) return;
-    const {top, bottom} = chartArea;
-    const x = scales.x;
-    const periodSet = new Set(getRecords().filter(r => r.period).map(r => r.date.slice(5)));
-    chart.data.labels.forEach((lbl, i) => {
-      if (!periodSet.has(lbl)) return;
-      const left  = x.getPixelForValue(i - 0.5);
-      const right = x.getPixelForValue(i + 0.5);
-      ctx.save();
-      ctx.fillStyle = 'rgba(255,107,138,0.13)';
-      ctx.fillRect(left, top, right - left, bottom - top);
-      ctx.restore();
-    });
-  }
-};
-Chart.register(periodBgPlugin);
 
 // ─── Data ─────────────────────────────────────────────────
 
@@ -523,46 +502,62 @@ function renderHistoryChart() {
   const labels  = records.map(r => r.date.slice(5));
   const hasY2   = [...histSelMetrics].some(id => ['steps','jog'].includes(id));
   const hasY    = [...histSelMetrics].some(id => !['steps','jog'].includes(id));
-  const datasets = [];
+
+  // Period bars drawn first so they appear behind all lines
+  const datasets = [{
+    type: 'bar',
+    label: '生理期',
+    data: records.map(r => r._empty ? null : (r.period ? 1 : null)),
+    backgroundColor: 'rgba(255,107,138,0.28)',
+    borderColor: 'rgba(255,107,138,0.5)',
+    borderWidth: 1,
+    borderRadius: 0,
+    barPercentage: 1,
+    categoryPercentage: 1,
+    yAxisID: 'yPeriod',
+    order: 10,
+  }];
+
   HIST_METRICS.forEach(m => {
     if (!histSelMetrics.has(m.id)) return;
-    const ds = {
+    datasets.push({
+      type: 'line',
       label: m.label+'('+m.unit+')',
       data:  records.map(r => r._empty ? null : (r[m.key]??null)),
       yAxisID: m.axis,
-    };
-    if (m.type === 'line') {
-      Object.assign(ds, {
-        type:'line', borderColor:m.color, backgroundColor:m.color+'18',
-        pointBackgroundColor:m.color, tension:.35, fill:false,
-        pointRadius:4, pointHoverRadius:7, borderWidth:2, spanGaps:true,
-      });
-    } else {
-      Object.assign(ds, {
-        type:'bar', backgroundColor:m.color+'bb', borderColor:m.color,
-        borderRadius:4, borderWidth:1, borderSkipped:false,
-      });
-    }
-    datasets.push(ds);
+      borderColor: m.color, backgroundColor: m.color+'18',
+      pointBackgroundColor: m.color, tension:.35, fill:false,
+      pointRadius:4, pointHoverRadius:7, borderWidth:2, spanGaps:true,
+      order: 1,
+    });
   });
+
   const scales = {
     x: SCALE_X,
-    y: {...SCALE_Y, display:hasY, position:'left'},
+    y:       {...SCALE_Y, display:hasY, position:'left'},
+    yPeriod: {display:false, min:0, max:1},
   };
   if (hasY2) {
     scales.y2 = {...SCALE_Y, display:true, position:'right', grid:{drawOnChartArea:false}};
   }
+
   const ctx = document.getElementById('histChart').getContext('2d');
   if (histChart) histChart.destroy();
-  if (!datasets.length) return;
+  if (datasets.length <= 1 && !datasets[0].data.some(v => v !== null)) return;
   histChart = new Chart(ctx, {
-    type:'bar',
-    data:{labels, datasets},
-    options:{
-      responsive:true,
-      plugins:{
-        legend:{display:true, labels:{color:'#8892a4',font:{family:'Outfit',size:11}}},
-        tooltip:TOOLTIP_OPTS,
+    type: 'bar',
+    data: {labels, datasets},
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          display: true,
+          labels: {
+            color:'#8892a4', font:{family:'Outfit',size:11},
+            filter: item => item.text !== '生理期' || records.some(r => r.period),
+          },
+        },
+        tooltip: TOOLTIP_OPTS,
       },
       scales,
     }
