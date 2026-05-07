@@ -107,30 +107,8 @@ tr.row-empty:hover td{background:rgba(255,255,255,.02);cursor:pointer}
 </header>
 
 <main>
-  <!-- STATS -->
-  <div class="grid grid-stats" id="statsRow" style="margin-bottom:0">
-    <div class="stat-card" onclick="selectMetric('weight',this)">
-      <div class="stat-icon">⚖️</div><div class="stat-val" id="s-weight">--<span class="stat-unit">kg</span></div><div class="stat-label">近7天平均體重</div>
-    </div>
-    <div class="stat-card" onclick="selectMetric('fat',this)">
-      <div class="stat-icon">📊</div><div class="stat-val" id="s-fat">--<span class="stat-unit">%</span></div><div class="stat-label">最新體脂肪</div>
-    </div>
-    <div class="stat-card" onclick="selectMetric('muscle',this)">
-      <div class="stat-icon">💪</div><div class="stat-val" id="s-muscle">--<span class="stat-unit">kg</span></div><div class="stat-label">最新肌肉量</div>
-    </div>
-    <div class="stat-card" onclick="selectMetric('bp',this)">
-      <div class="stat-icon">🩺</div><div class="stat-val" id="s-bp">--</div><div class="stat-label">最新血壓</div>
-    </div>
-    <div class="stat-card" onclick="selectMetric('steps',this)">
-      <div class="stat-icon">👟</div><div class="stat-val" id="s-steps">--</div><div class="stat-label">累計步數</div>
-    </div>
-    <div class="stat-card" onclick="selectMetric('jog',this)">
-      <div class="stat-icon">🏃</div><div class="stat-val" id="s-jog">--</div><div class="stat-label">超慢跑累計</div>
-    </div>
-  </div>
-
   <!-- FORM (full width) -->
-  <div class="card" style="margin-top:20px">
+  <div class="card">
     <div class="card-title">📥 今日記錄</div>
     <div class="form-grid">
       <div class="field"><label for="f-date">日期</label><input type="date" id="f-date"></div>
@@ -149,6 +127,28 @@ tr.row-empty:hover td{background:rgba(255,255,255,.02);cursor:pointer}
     <div class="form-actions" style="margin-top:18px">
       <button class="btn btn-accent" onclick="saveRecord()">✓ 儲存記錄</button>
       <button class="btn" onclick="clearForm()">✕ 清除</button>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="grid grid-stats" id="statsRow" style="margin-top:20px">
+    <div class="stat-card" onclick="selectMetric('weight',this)">
+      <div class="stat-icon">⚖️</div><div class="stat-val" id="s-weight">--<span class="stat-unit">kg</span></div><div class="stat-label">近7天平均體重</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('fat',this)">
+      <div class="stat-icon">📊</div><div class="stat-val" id="s-fat">--<span class="stat-unit">%</span></div><div class="stat-label">最新體脂肪</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('muscle',this)">
+      <div class="stat-icon">💪</div><div class="stat-val" id="s-muscle">--<span class="stat-unit">kg</span></div><div class="stat-label">最新肌肉量</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('bp',this)">
+      <div class="stat-icon">🩺</div><div class="stat-val" id="s-bp">--</div><div class="stat-label">最新血壓</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('steps',this)">
+      <div class="stat-icon">👟</div><div class="stat-val" id="s-steps">--</div><div class="stat-label">累計步數</div>
+    </div>
+    <div class="stat-card" onclick="selectMetric('jog',this)">
+      <div class="stat-icon">🏃</div><div class="stat-val" id="s-jog">--</div><div class="stat-label">超慢跑累計</div>
     </div>
   </div>
 
