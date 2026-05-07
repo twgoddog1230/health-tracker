@@ -71,6 +71,8 @@ th{text-align:left;padding:10px 12px;color:var(--muted);font-weight:500;border-b
 td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(255,255,255,.03)}
+tr.row-empty td{color:var(--muted)}
+tr.row-empty:hover td{background:rgba(255,255,255,.02);cursor:pointer}
 .del-btn{background:none;border:1px solid rgba(255,107,107,.3);border-radius:6px;color:var(--red);
   padding:4px 10px;cursor:pointer;font-size:.8rem;transition:.2s}
 .del-btn:hover{background:rgba(255,107,107,.15)}
@@ -167,13 +169,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
 
   <!-- HISTORY -->
   <div class="card" style="margin-top:20px">
-    <div class="card-title" style="justify-content:space-between">
-      <span>📋 歷史紀錄</span>
-      <button class="btn" style="font-size:.8rem;padding:5px 14px" onclick="toggleHistView()">
-        <span id="histViewBtn">📊 圖表</span>
-      </button>
-    </div>
-    <!-- filter row -->
+    <div class="card-title">📋 歷史紀錄</div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div class="range-btns" style="margin-bottom:0">
         <button class="range-btn hist-btn active" onclick="setHistoryFilter('all',this)">全部</button>
@@ -186,13 +182,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
         <button class="btn" id="histNextBtn" style="padding:5px 12px" onclick="shiftHistory(1)">下一期 ›</button>
       </div>
     </div>
-    <!-- chart view -->
-    <div id="histChartArea" style="display:none">
-      <div id="metricChecks" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px"></div>
-      <canvas id="histChart" height="220"></canvas>
-    </div>
-    <!-- table view -->
-    <div id="histTblWrap" class="tbl-wrap">
+    <div class="tbl-wrap">
       <table>
         <thead>
           <tr><th>日期</th><th>體重(kg)</th><th>體脂肪(%)</th><th>肌肉量(kg)</th><th>血壓</th><th>步數</th><th>超慢跑</th><th>生理期</th><th>操作</th></tr>
@@ -213,11 +203,7 @@ let mainChart    = null;
 let activeMetric = 'weight';
 let historyFilter = 'all';
 let historyOffset = 0;
-let histViewMode  = 'table';
-let histChart     = null;
-let histSelMetrics = new Set(['weight','fat']);
 
-// Config for the main single-metric chart
 const METRIC_CFG = {
   weight: {label:'體重',   unit:'kg',   key:'weight', color:'#00c9a7', type:'line'},
   fat:    {label:'體脂肪', unit:'%',    key:'fat',    color:'#00b4d8', type:'line'},
@@ -227,17 +213,6 @@ const METRIC_CFG = {
   jog:    {label:'超慢跑', unit:'分鐘', key:'jog',    color:'#ff9f43', type:'bar'},
 };
 
-// Config list for the multi-metric history chart
-const HIST_METRICS = [
-  {id:'weight', label:'體重',   key:'weight', color:'#00c9a7', type:'line', unit:'kg',   axis:'y'},
-  {id:'fat',    label:'體脂肪', key:'fat',    color:'#00b4d8', type:'line', unit:'%',    axis:'y'},
-  {id:'muscle', label:'肌肉量', key:'muscle', color:'#a78bfa', type:'line', unit:'kg',   axis:'y'},
-  {id:'bpSys',  label:'收縮壓', key:'bpSys',  color:'#ff6b6b', type:'line', unit:'mmHg', axis:'y'},
-  {id:'bpDia',  label:'舒張壓', key:'bpDia',  color:'#ff9f43', type:'line', unit:'mmHg', axis:'y'},
-  {id:'steps',  label:'步數',   key:'steps',  color:'#ffd93d', type:'bar',  unit:'步',   axis:'y2'},
-  {id:'jog',    label:'超慢跑', key:'jog',    color:'#4ecdc4', type:'bar',  unit:'分鐘', axis:'y2'},
-];
-
 const TOOLTIP_OPTS = {
   backgroundColor:'rgba(10,14,26,.95)', titleColor:'#00c9a7',
   bodyColor:'#e8eaf0', borderColor:'rgba(255,255,255,.1)', borderWidth:1, padding:12,
@@ -245,7 +220,7 @@ const TOOLTIP_OPTS = {
 const SCALE_X = {ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}};
 const SCALE_Y = {ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}};
 
-// Draws pink background on period days for any chart
+// Marks period days with a light pink background on any chart
 const periodBgPlugin = {
   id: 'periodBg',
   beforeDatasetsDraw(chart) {
@@ -282,7 +257,8 @@ function today() {
 function initDate() {
   document.getElementById('f-date').value = today();
   const d = new Date();
-  document.getElementById('todayLabel').textContent = ' · '+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+  document.getElementById('todayLabel').textContent =
+    ' · '+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
 }
 
 function fmtMinutes(mins) {
@@ -453,36 +429,49 @@ function setHistoryFilter(f, btn) {
   btn.classList.add('active');
   document.getElementById('histNav').style.display = f==='all' ? 'none' : 'flex';
   renderHistory();
-  if (histViewMode==='chart') renderHistoryChart();
 }
 
 function shiftHistory(dir) {
   if (dir > 0 && historyOffset >= 0) return;
   historyOffset += dir;
   renderHistory();
-  if (histViewMode==='chart') renderHistoryChart();
 }
 
-function getFilteredRecords() {
-  const all = getRecords().slice().reverse();
-  if (historyFilter === 'all') return all;
+// Returns rows for the current filter.
+// For 'month' and 'week': fills in ALL dates of the period (empty rows for days without data).
+function getFilteredRows() {
+  const recordMap = Object.fromEntries(getRecords().map(r => [r.date, r]));
+
+  if (historyFilter === 'all') {
+    return getRecords().slice().reverse();
+  }
+
   const now = new Date();
+  const dates = [];
+
   if (historyFilter === 'week') {
     const mon = new Date(now);
     const dow = mon.getDay();
     mon.setDate(mon.getDate() - (dow===0 ? 6 : dow-1) + historyOffset*7);
     mon.setHours(0,0,0,0);
-    const sun = new Date(mon); sun.setDate(sun.getDate()+6);
-    const start = mon.toISOString().slice(0,10), end = sun.toISOString().slice(0,10);
-    return all.filter(r => r.date >= start && r.date <= end);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(mon);
+      d.setDate(d.getDate() + i);
+      dates.push(d.toISOString().slice(0,10));
+    }
   }
+
   if (historyFilter === 'month') {
     let y = now.getFullYear(), m = now.getMonth() + historyOffset;
     y += Math.floor(m/12); m = ((m%12)+12)%12;
-    const prefix = y+'-'+String(m+1).padStart(2,'0');
-    return all.filter(r => r.date.startsWith(prefix));
+    const days = new Date(y, m+1, 0).getDate();
+    for (let d = 1; d <= days; d++) {
+      dates.push(y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0'));
+    }
   }
-  return all;
+
+  // newest first; fill with empty placeholder if no record for that date
+  return dates.reverse().map(date => recordMap[date] ?? {date, _empty:true});
 }
 
 function getHistoryLabel() {
@@ -506,8 +495,8 @@ function getHistoryLabel() {
 // ─── History Table ────────────────────────────────────────
 
 function renderHistory() {
-  const records = getFilteredRecords();
-  const label   = getHistoryLabel();
+  const rows  = getFilteredRows();
+  const label = getHistoryLabel();
   if (label) {
     document.getElementById('histLabel').textContent = label;
     const nb = document.getElementById('histNextBtn');
@@ -517,10 +506,20 @@ function renderHistory() {
   }
   const tbody = document.getElementById('historyBody');
   const empty = document.getElementById('emptyMsg');
-  if (!records.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+
+  // For 'all' with no records
+  if (!rows.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display = 'none';
-  tbody.innerHTML = records.map(r=>`
-    <tr>
+
+  tbody.innerHTML = rows.map(r => {
+    if (r._empty) {
+      return `<tr class="row-empty" data-date="${r.date}">
+        <td>${r.date}</td>
+        <td>--</td><td>--</td><td>--</td><td>--</td><td>--</td><td>--</td><td>--</td>
+        <td></td>
+      </tr>`;
+    }
+    return `<tr>
       <td>${r.date}</td>
       <td>${r.weight!=null?r.weight.toFixed(1):'--'}</td>
       <td>${r.fat!=null?r.fat.toFixed(1):'--'}</td>
@@ -530,127 +529,29 @@ function renderHistory() {
       <td>${r.jog?fmtMinutes(r.jog):'--'}</td>
       <td style="text-align:center">${r.period?'🩸':'--'}</td>
       <td><button class="del-btn" onclick="deleteRecord('${r.date}')">刪除</button></td>
-    </tr>`).join('');
+    </tr>`;
+  }).join('');
 }
 
-// Click row → fill form
+// Click row → fill form (works for both data rows and empty-date rows)
 document.addEventListener('click', function(e) {
   const tr = e.target.closest('tr');
   if (!tr || e.target.classList.contains('del-btn')) return;
-  const date = tr.cells[0]?.textContent;
+  const date = tr.cells[0]?.textContent?.trim();
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
   const r = getRecords().find(x => x.date===date);
-  if (!r) return;
-  document.getElementById('f-date').value    = r.date;
-  document.getElementById('f-weight').value  = r.weight??'';
-  document.getElementById('f-fat').value     = r.fat??'';
-  document.getElementById('f-muscle').value  = r.muscle??'';
-  document.getElementById('f-bp-sys').value  = r.bpSys??'';
-  document.getElementById('f-bp-dia').value  = r.bpDia??'';
-  document.getElementById('f-steps').value   = r.steps??'';
-  document.getElementById('f-jog').value     = r.jog||'';
-  document.getElementById('f-period').checked = !!r.period;
-  document.getElementById('periodField').classList.toggle('checked', !!r.period);
+  document.getElementById('f-date').value    = date;
+  document.getElementById('f-weight').value  = r?.weight??'';
+  document.getElementById('f-fat').value     = r?.fat??'';
+  document.getElementById('f-muscle').value  = r?.muscle??'';
+  document.getElementById('f-bp-sys').value  = r?.bpSys??'';
+  document.getElementById('f-bp-dia').value  = r?.bpDia??'';
+  document.getElementById('f-steps').value   = r?.steps??'';
+  document.getElementById('f-jog').value     = r?.jog||'';
+  document.getElementById('f-period').checked = !!r?.period;
+  document.getElementById('periodField').classList.toggle('checked', !!r?.period);
   document.getElementById('f-date').scrollIntoView({behavior:'smooth',block:'center'});
 });
-
-// ─── History Chart ────────────────────────────────────────
-
-function initMetricChecks() {
-  const container = document.getElementById('metricChecks');
-  container.innerHTML = '';
-  HIST_METRICS.forEach(m => {
-    const active = histSelMetrics.has(m.id);
-    const lbl = document.createElement('label');
-    lbl.style.cssText = `display:inline-flex;align-items:center;gap:6px;padding:5px 12px;
-      border-radius:8px;border:1px solid ${active?m.color:'rgba(255,255,255,.1)'};
-      color:${active?m.color:'#8892a4'};background:${active?m.color+'22':'transparent'};
-      cursor:pointer;font-size:.82rem;transition:.2s;font-family:Outfit,sans-serif;`;
-    const cb = document.createElement('input');
-    cb.type = 'checkbox'; cb.checked = active;
-    cb.style.cssText = `width:14px;height:14px;accent-color:${m.color};cursor:pointer;flex-shrink:0`;
-    cb.addEventListener('change', () => {
-      if (cb.checked) histSelMetrics.add(m.id); else histSelMetrics.delete(m.id);
-      lbl.style.borderColor = cb.checked ? m.color : 'rgba(255,255,255,.1)';
-      lbl.style.color       = cb.checked ? m.color : '#8892a4';
-      lbl.style.background  = cb.checked ? m.color+'22' : 'transparent';
-      renderHistoryChart();
-    });
-    lbl.appendChild(cb);
-    lbl.appendChild(document.createTextNode(m.label));
-    container.appendChild(lbl);
-  });
-}
-
-function renderHistoryChart() {
-  const records = getFilteredRecords().slice().reverse();
-  const labels  = records.map(r => r.date.slice(5));
-  const hasY2   = [...histSelMetrics].some(id => ['steps','jog'].includes(id));
-  const hasY    = [...histSelMetrics].some(id => !['steps','jog'].includes(id));
-  const datasets = [];
-  HIST_METRICS.forEach(m => {
-    if (!histSelMetrics.has(m.id)) return;
-    const ds = {
-      label: m.label+'('+m.unit+')',
-      data: records.map(r => r[m.key]??null),
-      yAxisID: m.axis,
-    };
-    if (m.type === 'line') {
-      Object.assign(ds, {
-        type:'line', borderColor:m.color, backgroundColor:m.color+'18',
-        pointBackgroundColor:m.color, tension:.35, fill:false,
-        pointRadius:4, pointHoverRadius:7, borderWidth:2, spanGaps:true,
-      });
-    } else {
-      Object.assign(ds, {
-        type:'bar', backgroundColor:m.color+'bb', borderColor:m.color,
-        borderRadius:4, borderWidth:1, borderSkipped:false,
-      });
-    }
-    datasets.push(ds);
-  });
-  const scales = {
-    x: SCALE_X,
-    y: {...SCALE_Y, display:hasY, position:'left'},
-  };
-  if (hasY2) {
-    scales.y2 = {...SCALE_Y, display:true, position:'right', grid:{drawOnChartArea:false}};
-  }
-  const ctx = document.getElementById('histChart').getContext('2d');
-  if (histChart) histChart.destroy();
-  if (!datasets.length) return;
-  histChart = new Chart(ctx, {
-    type:'bar',
-    data:{labels, datasets},
-    options:{
-      responsive:true,
-      plugins:{
-        legend:{display:true, labels:{color:'#8892a4',font:{family:'Outfit',size:11}}},
-        tooltip:TOOLTIP_OPTS,
-      },
-      scales,
-    }
-  });
-}
-
-function toggleHistView() {
-  histViewMode = histViewMode==='table' ? 'chart' : 'table';
-  const btn       = document.getElementById('histViewBtn');
-  const chartArea = document.getElementById('histChartArea');
-  const tblWrap   = document.getElementById('histTblWrap');
-  if (histViewMode === 'chart') {
-    btn.textContent = '📋 表格';
-    chartArea.style.display = 'block';
-    tblWrap.style.display   = 'none';
-    initMetricChecks();
-    renderHistoryChart();
-  } else {
-    btn.textContent = '📊 圖表';
-    chartArea.style.display = 'none';
-    tblWrap.style.display   = 'block';
-    renderHistory();
-  }
-}
 
 // ─── Export / Import ──────────────────────────────────────
 
@@ -685,7 +586,6 @@ function renderAll() {
   renderStats();
   renderChart();
   renderHistory();
-  if (histViewMode==='chart') renderHistoryChart();
 }
 
 initDate();
