@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>健康全記錄</title>
+<meta name="description" content="記錄每日體重、體脂肪、步數、超慢跑時間，追蹤健康趨勢">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#080d1a;--card:rgba(255,255,255,.06);--card2:rgba(255,255,255,.03);
+  --border:rgba(255,255,255,.1);--accent:#00c9a7;--accent2:#00b4d8;
+  --red:#ff6b6b;--yellow:#ffd93d;--text:#e8eaf0;--muted:#8892a4;
+  --radius:16px;--shadow:0 8px 32px rgba(0,0,0,.4);
+}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;
+  background-image:radial-gradient(ellipse at 20% 20%,rgba(0,201,167,.08) 0%,transparent 50%),
+  radial-gradient(ellipse at 80% 80%,rgba(0,180,216,.08) 0%,transparent 50%)}
+a{color:inherit;text-decoration:none}
+/* HEADER */
+header{padding:24px 24px 0;max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.logo{font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.logo span{font-size:.85rem;font-weight:400;-webkit-text-fill-color:var(--muted);margin-left:8px}
+.header-btns{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:10px;border:1px solid var(--border);
+  background:var(--card);color:var(--text);font-family:inherit;font-size:.85rem;cursor:pointer;transition:.2s}
+.btn:hover{background:rgba(255,255,255,.1);border-color:var(--accent);color:var(--accent)}
+.btn-accent{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#000;font-weight:600}
+.btn-accent:hover{opacity:.85;color:#000}
+/* MAIN */
+main{max-width:1100px;margin:0 auto;padding:24px}
+.grid{display:grid;gap:20px}
+.grid-2{grid-template-columns:1fr 1fr}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+@media(max-width:900px){.grid-2{grid-template-columns:1fr}.grid-4{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:500px){.grid-4{grid-template-columns:1fr 1fr}}
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);backdrop-filter:blur(12px)}
+.card-title{font-size:1rem;font-weight:600;color:var(--accent);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+/* STAT CARD */
+.stat-card{background:var(--card2);border:1px solid var(--border);border-radius:14px;padding:20px;text-align:center;transition:.2s}
+.stat-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.stat-icon{font-size:1.8rem;margin-bottom:8px}
+.stat-val{font-size:1.6rem;font-weight:700;color:var(--text)}
+.stat-unit{font-size:.8rem;color:var(--muted);margin-left:2px}
+.stat-label{font-size:.8rem;color:var(--muted);margin-top:4px}
+/* FORM */
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+label{font-size:.82rem;color:var(--muted);font-weight:500}
+input[type=text],input[type=number],input[type=date]{
+  background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;
+  padding:10px 14px;color:var(--text);font-family:inherit;font-size:.95rem;outline:none;transition:.2s;width:100%}
+input:focus{border-color:var(--accent);background:rgba(0,201,167,.08);box-shadow:0 0 0 3px rgba(0,201,167,.15)}
+input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.6)}
+.form-actions{display:flex;gap:10px;margin-top:6px;flex-wrap:wrap}
+/* CHART RANGE */
+.range-btns{display:flex;gap:6px;margin-bottom:16px}
+.range-btn{padding:5px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;
+  color:var(--muted);font-family:inherit;font-size:.82rem;cursor:pointer;transition:.2s}
+.range-btn.active,.range-btn:hover{background:var(--accent);border-color:var(--accent);color:#000;font-weight:600}
+/* TABLE */
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;padding:10px 12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.04);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.03)}
+.del-btn{background:none;border:1px solid rgba(255,107,107,.3);border-radius:6px;color:var(--red);
+  padding:4px 10px;cursor:pointer;font-size:.8rem;transition:.2s}
+.del-btn:hover{background:rgba(255,107,107,.15)}
+.empty{text-align:center;color:var(--muted);padding:32px;font-size:.9rem}
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--accent);color:#000;padding:10px 22px;border-radius:10px;
+  font-weight:600;font-size:.9rem;z-index:999;transition:.3s;pointer-events:none;opacity:0}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+/* scrollbar */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <div class="logo">🏃 健康全記錄<span id="todayLabel"></span></div>
+  </div>
+  <div class="header-btns">
+    <button class="btn" onclick="importData()" id="importBtn">📂 匯入</button>
+    <button class="btn" onclick="exportData()">💾 匯出</button>
+    <input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleImport(event)">
+  </div>
+</header>
+
+<main>
+  <!-- STATS -->
+  <div class="grid grid-4" id="statsRow" style="margin-bottom:0">
+    <div class="stat-card"><div class="stat-icon">⚖️</div><div class="stat-val" id="s-weight">--<span class="stat-unit">kg</span></div><div class="stat-label">近7天平均體重</div></div>
+    <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-val" id="s-fat">--<span class="stat-unit">%</span></div><div class="stat-label">最新體脂肪</div></div>
+    <div class="stat-card"><div class="stat-icon">👟</div><div class="stat-val" id="s-steps">--</div><div class="stat-label">累計步數</div></div>
+    <div class="stat-card"><div class="stat-icon">🏃</div><div class="stat-val" id="s-jog">--</div><div class="stat-label">超慢跑累計</div></div>
+  </div>
+
+  <div class="grid grid-2" style="margin-top:20px">
+    <!-- FORM -->
+    <div class="card">
+      <div class="card-title">📥 今日記錄</div>
+      <div class="form-grid">
+        <div class="field">
+          <label for="f-date">日期</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="field">
+          <label for="f-weight">體重（kg）</label>
+          <input type="number" id="f-weight" placeholder="例：70.5" step="0.1" min="20" max="300">
+        </div>
+        <div class="field">
+          <label for="f-fat">體脂肪（%）</label>
+          <input type="number" id="f-fat" placeholder="例：18.5" step="0.1" min="1" max="70">
+        </div>
+        <div class="field">
+          <label for="f-steps">步數</label>
+          <input type="number" id="f-steps" placeholder="例：8000" step="1" min="0">
+        </div>
+        <div class="field">
+          <label for="f-jog">超慢跑（分鐘）</label>
+          <input type="number" id="f-jog" placeholder="例：30" step="1" min="0">
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:18px">
+        <button class="btn btn-accent" onclick="saveRecord()" id="saveBtn">✓ 儲存記錄</button>
+        <button class="btn" onclick="clearForm()">✕ 清除</button>
+      </div>
+    </div>
+
+    <!-- CHART -->
+    <div class="card">
+      <div class="card-title">📈 體重曲線</div>
+      <div class="range-btns">
+        <button class="range-btn active" onclick="setRange(7,this)">7天</button>
+        <button class="range-btn" onclick="setRange(30,this)">30天</button>
+        <button class="range-btn" onclick="setRange(0,this)">全部</button>
+      </div>
+      <canvas id="weightChart" height="180"></canvas>
+    </div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="card" style="margin-top:20px">
+    <div class="card-title">📋 歷史紀錄</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>日期</th><th>體重(kg)</th><th>體脂肪(%)</th><th>步數</th><th>超慢跑</th><th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+      <div id="emptyMsg" class="empty" style="display:none">尚無記錄，請新增第一筆！</div>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const KEY = 'healthRecords_v1';
+let chartRange = 7;
+let weightChart = null;
+
+function getRecords() {
+  try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { return []; }
+}
+function saveRecords(arr) {
+  localStorage.setItem(KEY, JSON.stringify(arr));
+}
+
+// today date string
+function today() {
+  const d = new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function initDate() {
+  document.getElementById('f-date').value = today();
+  const d = new Date();
+  document.getElementById('todayLabel').textContent = ' · '+d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日';
+}
+
+// parse "H:MM" or "HH:MM" → minutes
+function parseJog(str) {
+  if (!str || !str.trim()) return 0;
+  const m = str.trim().match(/^(\d+):(\d{1,2})$/);
+  if (!m) return NaN;
+  return parseInt(m[1])*60 + parseInt(m[2]);
+}
+// minutes → "Xh Ym" or "Ym"
+function fmtMinutes(mins) {
+  if (!mins && mins !== 0) return '--';
+  const h = Math.floor(mins/60), m = mins%60;
+  if (h === 0) return m+'分';
+  if (m === 0) return h+'時';
+  return h+'時'+m+'分';
+}
+
+function toast(msg, isErr) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.background = isErr ? 'var(--red)' : 'var(--accent)';
+  el.style.color = isErr ? '#fff' : '#000';
+  el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+function saveRecord() {
+  const date = document.getElementById('f-date').value;
+  const weight = document.getElementById('f-weight').value;
+  const fat = document.getElementById('f-fat').value;
+  const steps = document.getElementById('f-steps').value;
+  const jogStr = document.getElementById('f-jog').value;
+
+  if (!date) { toast('請選擇日期', true); return; }
+  const jogMins = jogStr ? parseInt(jogStr) : 0;
+
+  const records = getRecords();
+  const idx = records.findIndex(r => r.date === date);
+  const entry = {
+    date,
+    weight: weight ? parseFloat(weight) : null,
+    fat: fat ? parseFloat(fat) : null,
+    steps: steps ? parseInt(steps) : null,
+    jog: jogMins
+  };
+  if (idx >= 0) { records[idx] = entry; toast('記錄已更新！'); }
+  else { records.push(entry); records.sort((a,b)=>a.date<b.date?-1:1); toast('記錄已儲存！'); }
+  saveRecords(records);
+  renderAll();
+}
+
+function clearForm() {
+  document.getElementById('f-date').value = today();
+  document.getElementById('f-weight').value = '';
+  document.getElementById('f-fat').value = '';
+  document.getElementById('f-steps').value = '';
+  document.getElementById('f-jog').value = '';
+}
+
+function deleteRecord(date) {
+  if (!confirm('確定刪除 '+date+' 的記錄？')) return;
+  const records = getRecords().filter(r => r.date !== date);
+  saveRecords(records);
+  renderAll();
+  toast('已刪除');
+}
+
+function setRange(n, btn) {
+  chartRange = n;
+  document.querySelectorAll('.range-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderChart();
+}
+
+function renderStats() {
+  const records = getRecords();
+  // avg weight last 7 days
+  const last7 = records.filter(r=>r.weight).slice(-7);
+  const avgW = last7.length ? (last7.reduce((s,r)=>s+r.weight,0)/last7.length).toFixed(1) : '--';
+  document.getElementById('s-weight').innerHTML = avgW+'<span class="stat-unit">kg</span>';
+  // latest fat
+  const latestFat = [...records].reverse().find(r=>r.fat!=null);
+  document.getElementById('s-fat').innerHTML = (latestFat?latestFat.fat.toFixed(1):'--')+'<span class="stat-unit">%</span>';
+  // total steps
+  const totalSteps = records.reduce((s,r)=>s+(r.steps||0),0);
+  document.getElementById('s-steps').textContent = totalSteps>0 ? totalSteps.toLocaleString() : '--';
+  // total jog
+  const totalJog = records.reduce((s,r)=>s+(r.jog||0),0);
+  document.getElementById('s-jog').textContent = totalJog>0 ? fmtMinutes(totalJog) : '--';
+}
+
+function renderChart() {
+  const allRecords = getRecords().filter(r=>r.weight);
+  let data = chartRange === 0 ? allRecords : allRecords.slice(-chartRange);
+  const labels = data.map(r=>r.date.slice(5));
+  const vals = data.map(r=>r.weight);
+  const ctx = document.getElementById('weightChart').getContext('2d');
+  if (weightChart) weightChart.destroy();
+  weightChart = new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        label:'體重(kg)',
+        data:vals,
+        borderColor:'#00c9a7',
+        backgroundColor:'rgba(0,201,167,.1)',
+        tension:.35,
+        fill:true,
+        pointBackgroundColor:'#00c9a7',
+        pointRadius:4,
+        pointHoverRadius:7,
+        borderWidth:2.5
+      }]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          backgroundColor:'rgba(10,14,26,.95)',
+          titleColor:'#00c9a7',
+          bodyColor:'#e8eaf0',
+          borderColor:'rgba(255,255,255,.1)',
+          borderWidth:1,
+          padding:12
+        }
+      },
+      scales:{
+        x:{ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}},
+        y:{ticks:{color:'#8892a4',font:{family:'Outfit',size:11}},grid:{color:'rgba(255,255,255,.05)'}}
+      }
+    }
+  });
+}
+
+function renderHistory() {
+  const records = getRecords().slice().reverse();
+  const tbody = document.getElementById('historyBody');
+  const empty = document.getElementById('emptyMsg');
+  if (!records.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = records.map(r=>`
+    <tr>
+      <td>${r.date}</td>
+      <td>${r.weight!=null?r.weight.toFixed(1):'--'}</td>
+      <td>${r.fat!=null?r.fat.toFixed(1):'--'}</td>
+      <td>${r.steps!=null?r.steps.toLocaleString():'--'}</td>
+      <td>${r.jog?fmtMinutes(r.jog):'--'}</td>
+      <td><button class="del-btn" onclick="deleteRecord('${r.date}')">刪除</button></td>
+    </tr>`).join('');
+}
+
+function renderAll() { renderStats(); renderChart(); renderHistory(); }
+
+// 點選日期表格列，自動填入表單
+document.addEventListener('click', function(e) {
+  const tr = e.target.closest('tr');
+  if (!tr || e.target.classList.contains('del-btn')) return;
+  const date = tr.cells[0]?.textContent;
+  if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+  const r = getRecords().find(x=>x.date===date);
+  if (!r) return;
+  document.getElementById('f-date').value = r.date;
+  document.getElementById('f-weight').value = r.weight??'';
+  document.getElementById('f-fat').value = r.fat??'';
+  document.getElementById('f-steps').value = r.steps??'';
+  document.getElementById('f-jog').value = r.jog || '';
+  document.getElementById('f-date').scrollIntoView({behavior:'smooth',block:'center'});
+});
+
+function exportData() {
+  const records = getRecords();
+  const blob = new Blob([JSON.stringify(records, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '健康全記錄_'+today()+'.json';
+  a.click();
+  toast('匯出成功！');
+}
+function importData() { document.getElementById('fileInput').click(); }
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (!Array.isArray(data)) throw new Error();
+      if (!confirm('匯入將覆蓋現有 '+getRecords().length+' 筆資料，確定？')) return;
+      saveRecords(data);
+      renderAll();
+      toast('匯入成功！共 '+data.length+' 筆');
+    } catch { toast('檔案格式錯誤', true); }
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+// init
+initDate();
+renderAll();
+</script>
+</body>
+</html>
