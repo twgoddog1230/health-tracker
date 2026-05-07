@@ -82,6 +82,16 @@ tr:hover td{background:rgba(255,255,255,.03)}
 ::-webkit-scrollbar{width:6px;height:6px}
 ::-webkit-scrollbar-track{background:transparent}
 ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px}
+/* STATS flexible grid */
+.grid-stats{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+/* period toggle */
+.period-field{display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:.2s}
+.period-field:hover{border-color:var(--accent)}
+.period-field input[type=checkbox]{width:18px;height:18px;accent-color:#ff6b8a;cursor:pointer;flex-shrink:0}
+.period-field label{font-size:.88rem;color:var(--muted);font-weight:500;cursor:pointer;line-height:1}
+.period-field.checked{border-color:#ff6b8a;background:rgba(255,107,138,.08)}
+.period-field.checked label{color:#ff6b8a}
 </style>
 </head>
 <body>
@@ -98,9 +108,11 @@ tr:hover td{background:rgba(255,255,255,.03)}
 
 <main>
   <!-- STATS -->
-  <div class="grid grid-4" id="statsRow" style="margin-bottom:0">
+  <div class="grid grid-stats" id="statsRow" style="margin-bottom:0">
     <div class="stat-card"><div class="stat-icon">⚖️</div><div class="stat-val" id="s-weight">--<span class="stat-unit">kg</span></div><div class="stat-label">近7天平均體重</div></div>
     <div class="stat-card"><div class="stat-icon">📊</div><div class="stat-val" id="s-fat">--<span class="stat-unit">%</span></div><div class="stat-label">最新體脂肪</div></div>
+    <div class="stat-card"><div class="stat-icon">💪</div><div class="stat-val" id="s-muscle">--<span class="stat-unit">kg</span></div><div class="stat-label">最新肌肉量</div></div>
+    <div class="stat-card"><div class="stat-icon">🩺</div><div class="stat-val" id="s-bp">--</div><div class="stat-label">最新血壓</div></div>
     <div class="stat-card"><div class="stat-icon">👟</div><div class="stat-val" id="s-steps">--</div><div class="stat-label">累計步數</div></div>
     <div class="stat-card"><div class="stat-icon">🏃</div><div class="stat-val" id="s-jog">--</div><div class="stat-label">超慢跑累計</div></div>
   </div>
@@ -123,12 +135,28 @@ tr:hover td{background:rgba(255,255,255,.03)}
           <input type="number" id="f-fat" placeholder="例：18.5" step="0.1" min="1" max="70">
         </div>
         <div class="field">
+          <label for="f-muscle">肌肉量（kg）</label>
+          <input type="number" id="f-muscle" placeholder="例：28.0" step="0.1" min="0" max="100">
+        </div>
+        <div class="field">
+          <label for="f-bp-sys">血壓高（收縮壓）</label>
+          <input type="number" id="f-bp-sys" placeholder="例：120" step="1" min="50" max="250">
+        </div>
+        <div class="field">
+          <label for="f-bp-dia">血壓低（舒張壓）</label>
+          <input type="number" id="f-bp-dia" placeholder="例：80" step="1" min="30" max="150">
+        </div>
+        <div class="field">
           <label for="f-steps">步數</label>
           <input type="number" id="f-steps" placeholder="例：8000" step="1" min="0">
         </div>
         <div class="field">
           <label for="f-jog">超慢跑（分鐘）</label>
           <input type="number" id="f-jog" placeholder="例：30" step="1" min="0">
+        </div>
+        <div class="period-field" id="periodField" onclick="togglePeriod()">
+          <input type="checkbox" id="f-period" onclick="event.stopPropagation();togglePeriod()">
+          <label for="f-period">🩸 生理期（當天）</label>
         </div>
       </div>
       <div class="form-actions" style="margin-top:18px">
@@ -156,7 +184,7 @@ tr:hover td{background:rgba(255,255,255,.03)}
       <table>
         <thead>
           <tr>
-            <th>日期</th><th>體重(kg)</th><th>體脂肪(%)</th><th>步數</th><th>超慢跑</th><th>操作</th>
+            <th>日期</th><th>體重(kg)</th><th>體脂肪(%)</th><th>肌肉量(kg)</th><th>血壓</th><th>步數</th><th>超慢跑</th><th>生理期</th><th>操作</th>
           </tr>
         </thead>
         <tbody id="historyBody"></tbody>
@@ -217,12 +245,23 @@ function toast(msg, isErr) {
   setTimeout(()=>el.classList.remove('show'), 2200);
 }
 
+function togglePeriod() {
+  const cb = document.getElementById('f-period');
+  const field = document.getElementById('periodField');
+  cb.checked = !cb.checked;
+  field.classList.toggle('checked', cb.checked);
+}
+
 function saveRecord() {
   const date = document.getElementById('f-date').value;
   const weight = document.getElementById('f-weight').value;
   const fat = document.getElementById('f-fat').value;
+  const muscle = document.getElementById('f-muscle').value;
+  const bpSys = document.getElementById('f-bp-sys').value;
+  const bpDia = document.getElementById('f-bp-dia').value;
   const steps = document.getElementById('f-steps').value;
   const jogStr = document.getElementById('f-jog').value;
+  const period = document.getElementById('f-period').checked;
 
   if (!date) { toast('請選擇日期', true); return; }
   const jogMins = jogStr ? parseInt(jogStr) : 0;
@@ -233,8 +272,12 @@ function saveRecord() {
     date,
     weight: weight ? parseFloat(weight) : null,
     fat: fat ? parseFloat(fat) : null,
+    muscle: muscle ? parseFloat(muscle) : null,
+    bpSys: bpSys ? parseInt(bpSys) : null,
+    bpDia: bpDia ? parseInt(bpDia) : null,
     steps: steps ? parseInt(steps) : null,
-    jog: jogMins
+    jog: jogMins,
+    period
   };
   if (idx >= 0) { records[idx] = entry; toast('記錄已更新！'); }
   else { records.push(entry); records.sort((a,b)=>a.date<b.date?-1:1); toast('記錄已儲存！'); }
@@ -246,8 +289,13 @@ function clearForm() {
   document.getElementById('f-date').value = today();
   document.getElementById('f-weight').value = '';
   document.getElementById('f-fat').value = '';
+  document.getElementById('f-muscle').value = '';
+  document.getElementById('f-bp-sys').value = '';
+  document.getElementById('f-bp-dia').value = '';
   document.getElementById('f-steps').value = '';
   document.getElementById('f-jog').value = '';
+  document.getElementById('f-period').checked = false;
+  document.getElementById('periodField').classList.remove('checked');
 }
 
 function deleteRecord(date) {
@@ -267,13 +315,20 @@ function setRange(n, btn) {
 
 function renderStats() {
   const records = getRecords();
+  const rev = [...records].reverse();
   // avg weight last 7 days
   const last7 = records.filter(r=>r.weight).slice(-7);
   const avgW = last7.length ? (last7.reduce((s,r)=>s+r.weight,0)/last7.length).toFixed(1) : '--';
   document.getElementById('s-weight').innerHTML = avgW+'<span class="stat-unit">kg</span>';
   // latest fat
-  const latestFat = [...records].reverse().find(r=>r.fat!=null);
+  const latestFat = rev.find(r=>r.fat!=null);
   document.getElementById('s-fat').innerHTML = (latestFat?latestFat.fat.toFixed(1):'--')+'<span class="stat-unit">%</span>';
+  // latest muscle
+  const latestMuscle = rev.find(r=>r.muscle!=null);
+  document.getElementById('s-muscle').innerHTML = (latestMuscle?latestMuscle.muscle.toFixed(1):'--')+'<span class="stat-unit">kg</span>';
+  // latest BP
+  const latestBP = rev.find(r=>r.bpSys!=null&&r.bpDia!=null);
+  document.getElementById('s-bp').innerHTML = latestBP ? latestBP.bpSys+'<span class="stat-unit">/</span>'+latestBP.bpDia : '--';
   // total steps
   const totalSteps = records.reduce((s,r)=>s+(r.steps||0),0);
   document.getElementById('s-steps').textContent = totalSteps>0 ? totalSteps.toLocaleString() : '--';
@@ -338,8 +393,11 @@ function renderHistory() {
       <td>${r.date}</td>
       <td>${r.weight!=null?r.weight.toFixed(1):'--'}</td>
       <td>${r.fat!=null?r.fat.toFixed(1):'--'}</td>
+      <td>${r.muscle!=null?r.muscle.toFixed(1):'--'}</td>
+      <td>${(r.bpSys!=null&&r.bpDia!=null)?r.bpSys+'/'+r.bpDia:'--'}</td>
       <td>${r.steps!=null?r.steps.toLocaleString():'--'}</td>
       <td>${r.jog?fmtMinutes(r.jog):'--'}</td>
+      <td style="text-align:center">${r.period?'🩸':'--'}</td>
       <td><button class="del-btn" onclick="deleteRecord('${r.date}')">刪除</button></td>
     </tr>`).join('');
 }
@@ -357,8 +415,13 @@ document.addEventListener('click', function(e) {
   document.getElementById('f-date').value = r.date;
   document.getElementById('f-weight').value = r.weight??'';
   document.getElementById('f-fat').value = r.fat??'';
+  document.getElementById('f-muscle').value = r.muscle??'';
+  document.getElementById('f-bp-sys').value = r.bpSys??'';
+  document.getElementById('f-bp-dia').value = r.bpDia??'';
   document.getElementById('f-steps').value = r.steps??'';
   document.getElementById('f-jog').value = r.jog || '';
+  document.getElementById('f-period').checked = !!r.period;
+  document.getElementById('periodField').classList.toggle('checked', !!r.period);
   document.getElementById('f-date').scrollIntoView({behavior:'smooth',block:'center'});
 });
 
