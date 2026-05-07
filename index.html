@@ -180,6 +180,18 @@ tr:hover td{background:rgba(255,255,255,.03)}
   <!-- HISTORY -->
   <div class="card" style="margin-top:20px">
     <div class="card-title">📋 歷史紀錄</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="range-btns" style="margin-bottom:0">
+        <button class="range-btn hist-btn active" onclick="setHistoryFilter('all',this)">全部</button>
+        <button class="range-btn hist-btn" onclick="setHistoryFilter('month',this)">月</button>
+        <button class="range-btn hist-btn" onclick="setHistoryFilter('week',this)">週</button>
+      </div>
+      <div id="histNav" style="display:none;align-items:center;gap:8px">
+        <button class="btn" style="padding:5px 12px" onclick="shiftHistory(-1)">‹ 上一期</button>
+        <span id="histLabel" style="color:var(--text);font-size:.9rem;min-width:130px;text-align:center;font-weight:500"></span>
+        <button class="btn" id="histNextBtn" style="padding:5px 12px" onclick="shiftHistory(1)">下一期 ›</button>
+      </div>
+    </div>
     <div class="tbl-wrap">
       <table>
         <thead>
@@ -200,6 +212,8 @@ tr:hover td{background:rgba(255,255,255,.03)}
 const KEY = 'healthRecords_v1';
 let chartRange = 7;
 let weightChart = null;
+let historyFilter = 'all';
+let historyOffset = 0;
 
 function getRecords() {
   try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch(e) { return []; }
@@ -382,8 +396,76 @@ function renderChart() {
   });
 }
 
+function setHistoryFilter(f, btn) {
+  historyFilter = f;
+  historyOffset = 0;
+  document.querySelectorAll('.hist-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('histNav').style.display = f === 'all' ? 'none' : 'flex';
+  renderHistory();
+}
+
+function shiftHistory(dir) {
+  if (dir > 0 && historyOffset >= 0) return;
+  historyOffset += dir;
+  renderHistory();
+}
+
+function getFilteredRecords() {
+  const all = getRecords().slice().reverse();
+  if (historyFilter === 'all') return all;
+  const now = new Date();
+  if (historyFilter === 'week') {
+    const mon = new Date(now);
+    const dow = mon.getDay();
+    mon.setDate(mon.getDate() - (dow === 0 ? 6 : dow - 1) + historyOffset * 7);
+    mon.setHours(0, 0, 0, 0);
+    const sun = new Date(mon);
+    sun.setDate(sun.getDate() + 6);
+    const start = mon.toISOString().slice(0, 10);
+    const end = sun.toISOString().slice(0, 10);
+    return all.filter(r => r.date >= start && r.date <= end);
+  }
+  if (historyFilter === 'month') {
+    let y = now.getFullYear(), m = now.getMonth() + historyOffset;
+    y += Math.floor(m / 12);
+    m = ((m % 12) + 12) % 12;
+    const prefix = y + '-' + String(m + 1).padStart(2, '0');
+    return all.filter(r => r.date.startsWith(prefix));
+  }
+  return all;
+}
+
+function getHistoryLabel() {
+  const now = new Date();
+  if (historyFilter === 'week') {
+    const mon = new Date(now);
+    const dow = mon.getDay();
+    mon.setDate(mon.getDate() - (dow === 0 ? 6 : dow - 1) + historyOffset * 7);
+    const sun = new Date(mon);
+    sun.setDate(sun.getDate() + 6);
+    const fmt = d => (d.getMonth() + 1) + '/' + d.getDate();
+    return fmt(mon) + ' ~ ' + fmt(sun);
+  }
+  if (historyFilter === 'month') {
+    let y = now.getFullYear(), m = now.getMonth() + historyOffset;
+    y += Math.floor(m / 12);
+    m = ((m % 12) + 12) % 12;
+    return y + '年' + (m + 1) + '月';
+  }
+  return '';
+}
+
 function renderHistory() {
-  const records = getRecords().slice().reverse();
+  const records = getFilteredRecords();
+  const label = getHistoryLabel();
+  if (label) {
+    document.getElementById('histLabel').textContent = label;
+    const nextBtn = document.getElementById('histNextBtn');
+    nextBtn.disabled = historyOffset >= 0;
+    nextBtn.style.opacity = historyOffset >= 0 ? '.4' : '1';
+    nextBtn.style.cursor = historyOffset >= 0 ? 'default' : 'pointer';
+  }
   const tbody = document.getElementById('historyBody');
   const empty = document.getElementById('emptyMsg');
   if (!records.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
